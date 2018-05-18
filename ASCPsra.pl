@@ -19,7 +19,7 @@ use Parallel::Simple qw(prun);
 our $ascp='~/.aspera/connect/bin/ascp';
 our $KEY='~/.aspera/connect/etc/asperaweb_id_dsa.openssh';
 our $fastq_dump='fastq-dump';
-our $pfastq_dump="$Bin/pfastq_dump";
+our $pfastq_dump="$Bin/pfastq\-dump";
 our $sra_stat='sra-stat'; #pfastq-dump需要该工具支持
 
 my $Check=`$ascp -h`;
@@ -75,7 +75,7 @@ Usage:
 
   -o|-outdir	<dir>	   Output directory [working directory $work_dir]
   -p|-cpu	<int>	   Threads number used for multi detasets downloading [$Core at most, $cpu default]
-  -t|-fqdumpCPU <int>      Threads used by pfastq-dump when convert SRA to fastq.[default $Core\/$cpu=$fqdumpCPU]
+  -t|-fqdumpCPU <int>      Threads used by pfastq-dump when convert SRA to fastq.[default $Core\/$cpu\=$fqdumpCPU]
                            When this value equal 1, then original fastq-dump will be used
 
   -h|-help                 Show this message
@@ -167,9 +167,13 @@ sub download{
     &run($CMD1);
     my $CMD2="$fastq_dump --gzip --split-3 $id.sra";
     if($fqdumpCPU>1){ #线程数多于1的时候自动加载pfastq-dump
-      $CMD2="$pfastq_dump -t $fqdumpCPU --gzip --split-3 -s $id.sra -O .";
+      $CMD2="$pfastq_dump -t $fqdumpCPU --gzip --split-3 -s $id.sra -O . --tmpdir ./$id.tmp";
     }
     &run($CMD2);
+    if($fqdumpCPU>1){ #手动删除pfastq-dump产生的临时文件夹
+      system("rm -rf ./$id.tmp");
+    }
+
     chdir($work_dir);
   }
   if($source eq 'ENA'){
