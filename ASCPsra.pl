@@ -1,6 +1,9 @@
 #!/usr/bin/perl
 # Wangshun @ Xiamen
-# 2018.5.15
+# Version 1.1
+# 2018.5.18
+
+# 修改了默认参数，添加了pfastq-dump的支持
 
 use strict;
 use warnings;
@@ -16,6 +19,8 @@ use Parallel::Simple qw(prun);
 our $ascp='~/.aspera/connect/bin/ascp';
 our $KEY='~/.aspera/connect/etc/asperaweb_id_dsa.openssh';
 our $fastq_dump='fastq-dump';
+our $pfastq_dump="$Bin/pfastq_dump";
+our $sra_stat='sra-stat'; #pfastq-dump需要该工具支持
 
 my $Check=`$ascp -h`;
 unless($Check){
@@ -26,6 +31,13 @@ $Check= `$fastq_dump -h`;
 unless($Check){
   print "NCBI fastq-dump should be installed first, see https://gitee.com/wangshun1121/ASCPsra \n";
   exit();
+}else{
+  $Check=`$sra_stat -h`;
+  unless($Check){
+    #提醒客户将sra-stat加入环境变量
+    print "fastq-dump has been installed, then let me know where sra-stat is ^_^ \n";
+    exit();
+  }
 }
 
 our $work_dir = getcwd;
@@ -38,7 +50,8 @@ my $source='SRA';
 my $list;
 my $link;
 my $outdir='.';
-my $cpu=$Core/2;
+my $cpu=4;
+my $fqdumpCPU=int($Core/$cpu); #pfastq-dump用的CPU数目
 my $help;
 
 GetOptions(
@@ -47,7 +60,7 @@ GetOptions(
   'o|outdir=s' => \$outdir,
   's|source=s' => \$source,
   'p|cpu=i' => \$cpu,
-
+  't|fqdumpCPU' => \$fqdumpCPU,
   'h|help' => \$help,
 );
 
@@ -62,7 +75,8 @@ Usage:
 
   -o|-outdir	<dir>	   Output directory [working directory $work_dir]
   -p|-cpu	<int>	   Threads number used for multi detasets downloading [$Core at most, $cpu default]
-
+  -t|-fqdumpCPU  <int> Threads used by pfastq-dump when convert SRA to fastq.[default $Core\/$cpu=$fqdumpCPU]
+                       When this value equal 1, then original fastq-dump will be used
   -h|-help                 Show this message
 
 USAGE
@@ -119,7 +133,7 @@ if(-e $list){
   	&download($id,$outdir,$source);
 
   	$pm->finish;
-  };
+  };$CMD2
   $pm->wait_all_children;
 
 }
@@ -152,6 +166,9 @@ sub download{
     chdir($outdir);
     &run($CMD1);
     my $CMD2="$fastq_dump --gzip --split-3 $id.sra";
+    if($fqdumpCPU>1){ #线程数多于1的时候自动加载pfastq-dump
+      $CMD2="$pfastq_dump -t $fqdumpCPU --gzip --split-3 -s $id.sra -O .";
+    }
     &run($CMD2);
     chdir($work_dir);
   }
