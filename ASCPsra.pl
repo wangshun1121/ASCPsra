@@ -68,15 +68,16 @@ my $usage=<<USAGE;
 
 Usage:
   perl $0 -i SRRXXXXXX
-  perl $0 -l SraAccList.txt -o ./sequences -p 20
+  perl $0 -l SraAccList.txt -o ./sequences -p 5 -t 8
 
   -i|-id	<str> 	   SRA accession ID
   -l|-list 	<file>	   SRA ID list, all IDs should be in one column
 
   -o|-outdir	<dir>	   Output directory [working directory $work_dir]
   -p|-cpu	<int>	   Threads number used for multi detasets downloading [$Core at most, $cpu default]
-  -t|-fqdumpCPU  <int> Threads used by pfastq-dump when convert SRA to fastq.[default $Core\/$cpu=$fqdumpCPU]
-                       When this value equal 1, then original fastq-dump will be used
+  -t|-fqdumpCPU <int>      Threads used by pfastq-dump when convert SRA to fastq.[default $Core\/$cpu=$fqdumpCPU]
+                           When this value equal 1, then original fastq-dump will be used
+
   -h|-help                 Show this message
 
 USAGE
@@ -131,9 +132,8 @@ if(-e $list){
   foreach my $id (@ids) {
   	my $pid=$pm->start and next;
   	&download($id,$outdir,$source);
-
   	$pm->finish;
-  };$CMD2
+  };
   $pm->wait_all_children;
 
 }
