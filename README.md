@@ -6,6 +6,12 @@
 
 参考文章：[**SRA、SAM以及Fastq文件高速下载方法**](http://bioinfostar.com/2017/12/23/How-to-download-SRA-data-zh_CN/)。
 
+## 更新信息
+
+* 添加了[**pfastq-dump**](https://github.com/inutano/pfastq-dump)支持，可设定SRA转换fq的线程。若线程数指定为1则仍然采用默认的fastq-dump。
+
+* 默认参数修改。考虑到同时下载太多文件网络可能会拥堵，故将默认的文件下载数目调整为4。
+
 ## 程序安装与环境部署
 
 ### 获取程序
@@ -87,10 +93,10 @@ perl ASCPsra.pl -i SRR7166333
 ### 多个SRA数据下载到指定文件夹中
 
 ```
-perl ASCPsra.pl -l SraAccList.txt -o ./data
+perl ASCPsra.pl -l SraAccList.txt -o ./data -t 8
 ```
 
-SraAccList.txt中给出了5个SRA的ID。通过上面的命令，直接讲它们同时下载在./data的文件夹当中。每个SRA数据，都有SRAXXXXXX.sra、SRAXXXXXX_1.fastq.gz和SRAXXXXXX_2.fastq.gz三个文件。
+SraAccList.txt中给出了5个SRA的ID。通过上面的命令，直接讲它们同时下载在./data的文件夹当中。每个SRA数据，都有SRAXXXXXX.sra、SRAXXXXXX_1.fastq.gz和SRAXXXXXX_2.fastq.gz三个文件。-t参数设置SRA转换fastq时，pfastq-dump的线程数目。
 
 ### 部分SRA数据可能下载失败
 
