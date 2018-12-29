@@ -181,7 +181,7 @@ sub download{
     print STDERR "Warning: downloading single end sequences from ENA are not taken into consideration\n";
     # ENA可直接下载fq数据，本版本中暂时仅考虑双端序列的情况
     $link='era-fasp@fasp.sra.ebi.ac.uk:/vol1/fastq';
-      if（length($id)==10){
+      if(length($id) == 10){
           # 10位SRA会在Sub2子文件夹里有000-009的10个额外的子文件夹中
           my $tmp=substr($id,9,1);
           $link="$link/$sub2/00$tmp/$id/$id";
