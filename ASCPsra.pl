@@ -78,13 +78,12 @@ Usage:
   -p|-cpu	<int>	   Threads number used for multi detasets downloading [$Core at most, $cpu default]
   -t|-fqdumpCPU <int>      Threads used by pfastq-dump when convert SRA to fastq.[default $Core\/$cpu\=$fqdumpCPU]
                            When this value equal 1, then original fastq-dump will be used
+  -s|-source    <str>      Where the data are from. SRA(default) or ENA. NO .sra files when downloading from ENA
 
   -h|-help                 Show this message
 
 USAGE
 
-# ENA的下载暂时隐藏
-# -s|-source    <str>      Where the data are from. SRA(default) or ENA. NO .sra files when downloading from ENA
 
 
 if ($help) {
