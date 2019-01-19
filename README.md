@@ -98,6 +98,14 @@ perl ASCPsra.pl -l SraAccList.txt -o ./data -t 8
 
 SraAccList.txt中给出了5个SRA的ID。通过上面的命令，直接讲它们同时下载在./data的文件夹当中。每个SRA数据，都有SRAXXXXXX.sra、SRAXXXXXX_1.fastq.gz和SRAXXXXXX_2.fastq.gz三个文件。-t参数设置SRA转换fastq时，pfastq-dump的线程数目。
 
+### 可以指定ENA，直接下载Reads
+
+```
+perl ASCPsra.pl -I SRR7166333 -s ENA
+```
+
+注意：目前`-s ENA`仅仅支持双端Reads的下载。单端的Reads尚未支持。
+
 ### 部分SRA数据可能下载失败
 
 经过测试，发现有一部分SRA的数据不能直接通过本脚本下载，例如[**SRR7167489**](https://trace.ncbi.nlm.nih.gov/Traces/sra/?run=SRR7167489)。请大家使用本脚本的时候切记留意程序产生的日志文件和报错信息，以及下载数据是否完整。
