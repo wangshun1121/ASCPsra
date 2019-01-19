@@ -101,7 +101,7 @@ SraAccList.txt中给出了5个SRA的ID。通过上面的命令，直接讲它们
 ### 可以指定ENA，直接下载Reads
 
 ```
-perl ASCPsra.pl -I SRR7166333 -s ENA
+perl ASCPsra.pl -i SRR7166333 -s ENA
 ```
 
 注意：目前`-s ENA`仅仅支持双端Reads的下载。单端的Reads尚未支持。
