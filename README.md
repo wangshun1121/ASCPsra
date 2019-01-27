@@ -104,7 +104,13 @@ SraAccList.txt中给出了5个SRA的ID。通过上面的命令，直接讲它们
 perl ASCPsra.pl -i SRR7166333 -s ENA
 ```
 
-注意：目前`-s ENA`仅仅支持双端Reads的下载。单端的Reads尚未支持。
+### 下载单端测序数据
+
+添加单端single end数据，只需添加-single即可。
+
+**切记：若给出SRA ID列表下载多个数据时，单端跟双端不可以同时下！**
+
+单端数据下载实例见：**PRJEB24068**([SRA](https://www.ncbi.nlm.nih.gov/bioproject/PRJEB24068),[ENA](https://www.ebi.ac.uk/ena/data/view/PRJEB24068))。
 
 ### 部分SRA数据可能下载失败
 
