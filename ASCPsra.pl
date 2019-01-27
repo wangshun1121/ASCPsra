@@ -52,6 +52,7 @@ my $list;
 my $link;
 my $outdir='.';
 my $cpu=4;
+my $single=0; # 是否是单端数据
 my $fqdumpCPU=int($Core/$cpu); #pfastq-dump用的CPU数目
 my $help;
 
@@ -62,6 +63,7 @@ GetOptions(
   's|source=s' => \$source,
   'p|cpu=i' => \$cpu,
   't|fqdumpCPU' => \$fqdumpCPU,
+  'single!' => \$single,
   'h|help' => \$help,
 );
 
@@ -79,11 +81,13 @@ Usage:
   -t|-fqdumpCPU <int>      Threads used by pfastq-dump when convert SRA to fastq.[default $Core\/$cpu\=$fqdumpCPU]
                            When this value equal 1, then original fastq-dump will be used
   -s|-source    <str>      Where the data are from. SRA(default) or ENA. NO .sra files when downloading from ENA
-
+  -single                  if -single, then ALL files are downloaded and processed as single end files
   -h|-help                 Show this message
 
 USAGE
 
+# ENA的下载暂时隐藏
+# -s|-source    <str>      Where the data are from. SRA(default) or ENA. NO .sra files when downloading from ENA
 
 
 if ($help) {
@@ -165,19 +169,26 @@ sub download{
     my $CMD1="$ascp -v -i $KEY -k 1 -T -l 300m $link .";
     chdir($outdir);
     &run($CMD1);
-    my $CMD2="$fastq_dump --gzip --split-3 $id.sra";
-    if($fqdumpCPU>1){ #线程数多于1的时候自动加载pfastq-dump
-      $CMD2="$pfastq_dump -t $fqdumpCPU --gzip --split-3 -s $id.sra -O . --tmpdir ./$id.tmp";
+    my $CMD2=();
+    if($single){ # 单端
+      $CMD2="$fastq_dump --gzip $id.sra";
+      if($fqdumpCPU>1){ #线程数多于1的时候自动加载pfastq-dump
+        $CMD2="$pfastq_dump -t $fqdumpCPU --gzip --split-3 -s $id.sra -O . --tmpdir ./$id.tmp";
+      }
+    }else{ #双端
+      $CMD2="$fastq_dump --gzip --split-3 $id.sra";
+      if($fqdumpCPU>1){ #线程数多于1的时候自动加载pfastq-dump
+        $CMD2="$pfastq_dump -t $fqdumpCPU --gzip --split-3 -s $id.sra -O . --tmpdir ./$id.tmp";
+      }
     }
     &run($CMD2);
     if($fqdumpCPU>1){ #手动删除pfastq-dump产生的临时文件夹
       system("rm -rf ./$id.tmp");
     }
-
     chdir($work_dir);
   }
   if($source eq 'ENA'){
-    print STDERR "Warning: downloading single end sequences from ENA are not taken into consideration\n";
+    # print STDERR "Warning: downloading single end sequences from ENA are not taken into consideration\n";
     # ENA可直接下载fq数据，本版本中暂时仅考虑双端序列的情况
     $link='era-fasp@fasp.sra.ebi.ac.uk:/vol1/fastq';
       if(length($id) == 10){
@@ -187,18 +198,26 @@ sub download{
       }else{
           $link="$link/$sub2/$id/$id";
       }
-    
 
-    my $CMD1="$ascp -QT -l 300m -P33001 -i $KEY $link\_1.fastq.gz .";
-    my $CMD2="$ascp -QT -l 300m -P33001 -i $KEY $link\_2.fastq.gz .";
+    if($single){
+      # 单端Reads
+      my $CMD="$ascp -QT -l 300m -P33001 -i $KEY -k 1 $link.fastq.gz .";
+      chdir($outdir);
+      &run($CMD);
+      chdir($work_dir);
+    }else{
+      # 双端Reads
+      my $CMD1="$ascp -QT -l 300m -P33001 -i $KEY -k 1 $link\_1.fastq.gz .";
+      my $CMD2="$ascp -QT -l 300m -P33001 -i $KEY -k 1 $link\_2.fastq.gz .";
+      #开双线程下载
+      chdir($outdir);
+      prun(
+    		sub1=>[\&run,($CMD1)],
+    		sub2=>[\&run,($CMD2)],
+    	)or die(Parallel::Simple::errplus());
+      chdir($work_dir);
+    }
 
-    #开双线程下载
-    chdir($outdir);
-    prun(
-  		sub1=>[\&run,($CMD1)],
-  		sub2=>[\&run,($CMD2)],
-  	)or die(Parallel::Simple::errplus());
-    chdir($work_dir);
   }
 
 
