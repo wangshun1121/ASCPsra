@@ -128,5 +128,5 @@ perl ASCPsra.pl -l SraAccList.txt -o ./data
 单端数据下载实例见：**ERR2002452**([SRA](https://trace.ncbi.nlm.nih.gov/Traces/sra/?run=ERR2002452),[ENA](https://www.ebi.ac.uk/ena/data/view/ERR2002452))。
 
 ```
-perl ASCPsra.pl -i ERR2002452 -s SRA
+perl ASCPsra.pl -i ERR2002452 -s SRA -single
 ```
