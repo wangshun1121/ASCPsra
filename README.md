@@ -8,9 +8,9 @@
 
 ## 更新信息
 
-* 添加了[**pfastq-dump**](https://github.com/inutano/pfastq-dump)支持，可设定SRA转换fq的线程。若线程数指定为1则仍然采用默认的fastq-dump。
+* 默认下载源更新为ENA
 
-* 默认参数修改。考虑到同时下载太多文件网络可能会拥堵，故将默认的文件下载数目调整为4。
+* ENA下载fastq文件实现了自动的md5校验，且通过md5校验信息，自动识别ID对应的测序文件是单端还是双端
 
 ## 程序安装与环境部署
 
@@ -82,36 +82,47 @@ fastq-dump -h
 
 ## 使用示例
 
-### SRA数据一键下载
+### 直接下载Reads
 
 ```
 perl ASCPsra.pl -i SRR7166333
 ```
 
+直接将[**SRR7166333**](https://www.ebi.ac.uk/ena/data/view/SRR7166333)的fastq的序列下载在当前目录。RR7166333_1.fastq.gz和SRR7166333_2.fastq.gz两个文件。还有一个md5文件。下载结束，请使用下面的命令校验一下文件：
+
+```
+md5sum -c md5
+```
+
+### SRA数据一键下载
+
+```
+perl ASCPsra.pl -s SRA -i SRR7166333
+```
+
 直接将[**SRR7166333**](https://www.ncbi.nlm.nih.gov/sra/SRR7166333)的fastq的序列下载在当前目录。产生SRR7166333.sra、SRR7166333_1.fastq.gz和SRR7166333_2.fastq.gz三个文件。
 
-### 多个SRA数据下载到指定文件夹中
+SRA数据源没有给md5，因为只有完整的SRA文件才能够成功释放出fastq。
+
+### 多个数据下载到指定文件夹中
+
+**SraAccList.txt**中，两个ID都是大肠杆菌的测序数据。其中**SRR7167489**是双端数据，**ERR2002452**是单端数据。
 
 ```
-perl ASCPsra.pl -l SraAccList.txt -o ./data -t 8
+perl ASCPsra.pl -l SraAccList.txt -o ./data
 ```
 
-SraAccList.txt中给出了5个SRA的ID。通过上面的命令，直接讲它们同时下载在./data的文件夹当中。每个SRA数据，都有SRAXXXXXX.sra、SRAXXXXXX_1.fastq.gz和SRAXXXXXX_2.fastq.gz三个文件。-t参数设置SRA转换fastq时，pfastq-dump的线程数目。
+通过上面的命令，直接讲它们同时下载在./data的文件夹当中。每个ID，都有对应的fastq.gz文件。还有一个md5文件，下载结束务必校验一下文件完整性。
 
-### 可以指定ENA，直接下载Reads
-
-```
-perl ASCPsra.pl -i SRR7166333 -s ENA
-```
 
 ### 下载单端测序数据
 
-添加单端single end数据，只需添加-single即可。
+**若给出SRA ID列表下载多个数据时，目前单端跟双端不可以从NCBI SRA源同时下！但是ENA可以。**
 
-**切记：若给出SRA ID列表下载多个数据时，单端跟双端不可以同时下！**
+针对SRA数据源，添加单端single end数据，只需添加-single即可。(在将来的版本更新中，希望将这个参数取消，即让程序自动识别单端与双端)。
 
-单端数据下载实例见：**PRJEB24068**([SRA](https://www.ncbi.nlm.nih.gov/bioproject/PRJEB24068),[ENA](https://www.ebi.ac.uk/ena/data/view/PRJEB24068))。
+单端数据下载实例见：**ERR2002452**([SRA](https://trace.ncbi.nlm.nih.gov/Traces/sra/?run=ERR2002452),[ENA](https://www.ebi.ac.uk/ena/data/view/ERR2002452))。
 
-### 部分SRA数据可能下载失败
-
-经过测试，发现有一部分SRA的数据不能直接通过本脚本下载，例如[**SRR7167489**](https://trace.ncbi.nlm.nih.gov/Traces/sra/?run=SRR7167489)。请大家使用本脚本的时候切记留意程序产生的日志文件和报错信息，以及下载数据是否完整。
+```
+perl ASCPsra.pl -i ERR2002452 -s SRA
+```

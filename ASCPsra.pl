@@ -47,7 +47,7 @@ chomp($Core); # Core number of server
 
 
 my $id;
-my $source='SRA';
+my $source='ENA';
 my $list;
 my $link;
 my $outdir='.';
@@ -80,8 +80,9 @@ Usage:
   -p|-cpu	<int>	   Threads number used for multi detasets downloading [$Core at most, $cpu default]
   -t|-fqdumpCPU <int>      Threads used by pfastq-dump when convert SRA to fastq.[default $Core\/$cpu\=$fqdumpCPU]
                            When this value equal 1, then original fastq-dump will be used
-  -s|-source    <str>      Where the data are from. SRA(default) or ENA. NO .sra files when downloading from ENA
+  -s|-source    <str>      Where the data are from. ENA(default) or SRA. NO .sra files when downloading from ENA
   -single                  if -single, then ALL files are downloaded and processed as single end files
+                           However, when downloading from ENA, whether single or double strend reads can be detected from md5 info
   -h|-help                 Show this message
 
 USAGE
@@ -140,6 +141,11 @@ if(-e $list){
   };
   $pm->wait_all_children;
 
+  if(-e "$outdir/md5sum"){ # 自动去除重复的md5
+    system("sort -k 2 $outdir/md5sum|uniq >$outdir/md5");
+    system("rm -f $outdir/md5sum");
+  }
+
 }
 
 sub linkdownload{
@@ -191,6 +197,13 @@ sub download{
     # print STDERR "Warning: downloading single end sequences from ENA are not taken into consideration\n";
     # ENA可直接下载fq数据，本版本中暂时仅考虑双端序列的情况
     $link='era-fasp@fasp.sra.ebi.ac.uk:/vol1/fastq';
+    my $md5=`curl -s "https://www.ebi.ac.uk/ena/data/warehouse/filereport?accession=$id&result=read_run&fields=fastq_md5&download=txt"`;
+    $md5=(split/\n/,$md5)[1];
+    my @md5=split/;/,$md5;
+    my $AutoSingle=$single;
+    if(scalar(@md5)==1){$AutoSingle=1;}
+    if(scalar(@md5)==2){$AutoSingle=0;} # 通过读取md5的信息，自动判断数据是单端还是双端
+
       if(length($id) == 10){
           # 10位SRA会在Sub2子文件夹里有000-009的10个额外的子文件夹中
           my $tmp=substr($id,9,1);
@@ -199,27 +212,60 @@ sub download{
           $link="$link/$sub2/$id/$id";
       }
 
-    if($single){
-      # 单端Reads
+    if($AutoSingle){
+      # 单端Reads，自动匹配是否是单端序列
+      system("echo \"$md5[0] $id.fastq.gz\" >> $outdir/md5sum");
       my $CMD="$ascp -QT -l 300m -P33001 -i $KEY -k 1 $link.fastq.gz .";
       chdir($outdir);
-      &run($CMD);
+      &GetFile($CMD,"$id.fastq.gz",$md5[0]);
       chdir($work_dir);
     }else{
       # 双端Reads
+      system("echo \"$md5[0] $id\_1.fastq.gz\" >> $outdir/md5sum");
+      system("echo \"$md5[1] $id\_2.fastq.gz\" >> $outdir/md5sum");
       my $CMD1="$ascp -QT -l 300m -P33001 -i $KEY -k 1 $link\_1.fastq.gz .";
       my $CMD2="$ascp -QT -l 300m -P33001 -i $KEY -k 1 $link\_2.fastq.gz .";
       #开双线程下载
       chdir($outdir);
       prun(
-    		sub1=>[\&run,($CMD1)],
-    		sub2=>[\&run,($CMD2)],
+    		sub1=>[\&GetFile,($CMD1,"$id\_1.fastq.gz",$md5[0])],
+    		sub2=>[\&GetFile,($CMD2,"$id\_2.fastq.gz",$md5[1])],
     	)or die(Parallel::Simple::errplus());
       chdir($work_dir);
     }
 
   }
 
+
+  sub GetFile{
+    # 2019.3.8 添加针对ENA下载数据的MD5校验
+    my $CMD=shift; # 文件下载命令
+    my $File=shift; # 文件名
+    my $md5=shift; # 待校验的md5
+
+    unless(-e $File){&run($CMD);} # 文件没有下载完，则跑
+    my $Checked=();
+    my $N=1;
+    while($N<5){ # 下载最多尝试5次
+      $Checked=`md5sum $File`;
+      chomp($Checked);
+      $Checked=(split/\ /,$Checked)[0];
+      if($md5 eq $Checked){
+        print STDERR "$File downloaded!\n\n";
+        last;
+      }
+      else{
+        $N++;
+        system("rm -f $File");
+        print STDERR "$File check failed. True md5: $md5; Checked: $Checked\n";
+        &run($CMD); # md5校验失败，则删除目标文件，重新下载
+        next;
+      }
+    }
+    unless($md5 eq $Checked){
+      print STDERR "!!! $File check failed, please check the file manually\n";
+    }
+  }
 
   sub run{
   	my $CMD = shift;
@@ -229,7 +275,7 @@ sub download{
   	$log.=`$CMD`;
     $log.="End:";
     $log.=localtime();
-    $log.="\n\n";
+    $log.="\n";
     print $log;
   }
 }
