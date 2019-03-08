@@ -94,9 +94,24 @@ perl ASCPsra.pl -i SRR7166333
 md5sum -c md5
 ```
 
+### 多个数据下载到指定文件夹中
 
+**SraAccList.txt**中，两个ID都是大肠杆菌的测序数据。其中**SRR7167489**是双端数据，**ERR2002452**是单端数据。
+
+```
+perl ASCPsra.pl -l SraAccList.txt -o ./data -p 2
+```
+
+通过上面的命令，直接将同时下载在./data的文件夹当中。-p参数表示同时下载多少个ID的数据。
+
+每个ID都有对应的fastq.gz文件。还有一个md5文件，下载结束务必校验一下文件完整性。
+
+> * 文件下载结束，可将下载命令重新运行一遍，程序会自动检查文件完整性，正确下载的文件会自动跳过，未正确下载的文件会继续下载。
+> * 这个福利仅限于ENA来源的数据。
 
 ### SRA数据一键下载
+
+从SRA下载数据，需要首先下载.sra格式的文件，然后再通过**pfastq-dump**(并行封装的fastq-dump)将.sra文件转换为fastq文件。由于不能直接拿到fastq原始数据，还要经过二次转换，这就是我为何在这个版本中将默认的SRA下载源修改成了ENA。
 
 ```
 perl ASCPsra.pl -s SRA -i SRR7166333
@@ -106,24 +121,17 @@ perl ASCPsra.pl -s SRA -i SRR7166333
 
 SRA数据源没有给md5，因为只有完整的SRA文件才能够成功释放出fastq。
 
-### 多个数据下载到指定文件夹中
-
-**SraAccList.txt**中，两个ID都是大肠杆菌的测序数据。其中**SRR7167489**是双端数据，**ERR2002452**是单端数据。
+从SRA数据源下数据，可额外设定每个SRA转换fastq的线程数，通过 -t参数指定。
 
 ```
-perl ASCPsra.pl -l SraAccList.txt -o ./data
+perl ASCPsra.pl -l SRAacc.list -s SRA -p 4 -t 6
 ```
 
-通过上面的命令，直接讲它们同时下载在./data的文件夹当中。每个ID，都有对应的fastq.gz文件。还有一个md5文件，下载结束务必校验一下文件完整性。
+### SRA下载单端测序数据
 
-> * 文件下载结束，可将下载命令重新运行一遍，程序会自动检查文件完整性，正确下载的文件会自动跳过，未正确下载的文件会继续下载。
-> * 这个福利仅限于ENA来源的数据
+**目前的版本中，从NCBI SRA源下数据的时候，单端数据跟双端数据必须分放在不同表格中下载，不能同时下**
 
-### 下载单端测序数据
-
-**若给出SRA ID列表下载多个数据时，目前单端跟双端不可以从NCBI SRA源同时下！但是ENA可以。**
-
-针对SRA数据源，添加单端single end数据，只需添加-single即可。(在将来的版本更新中，希望将这个参数取消，即让程序自动识别单端与双端)。
+针对SRA数据源，添加单端single end数据，需添加-single告诉程序这是单端数据——否则下载完SRA转换fastq的时候会出错。(在将来的版本更新中，希望将这个参数取消，即让程序自动识别单端与双端)。
 
 单端数据下载实例见：**ERR2002452**([SRA](https://trace.ncbi.nlm.nih.gov/Traces/sra/?run=ERR2002452),[ENA](https://www.ebi.ac.uk/ena/data/view/ERR2002452))。
 
