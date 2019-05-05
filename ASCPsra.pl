@@ -197,13 +197,22 @@ sub download{
     # print STDERR "Warning: downloading single end sequences from ENA are not taken into consideration\n";
     # ENA可直接下载fq数据，本版本中暂时仅考虑双端序列的情况
     $link='era-fasp@fasp.sra.ebi.ac.uk:/vol1/fastq';
-    my $md5=`curl -s "https://www.ebi.ac.uk/ena/data/warehouse/filereport?accession=$id&result=read_run&fields=fastq_md5&download=txt"`;
-    $md5=(split/\n/,$md5)[1];
-    my @md5=split/;/,$md5;
-    my $AutoSingle=$single;
-    if(scalar(@md5)==1){$AutoSingle=1;}
-    if(scalar(@md5)==2){$AutoSingle=0;} # 通过读取md5的信息，自动判断数据是单端还是双端
+    my $WebInfo=`curl -s "https://www.ebi.ac.uk/ena/data/warehouse/filereport?accession=$id&result=read_run&fields=fastq_aspera,fastq_md5&download=txt"`;
+    $WebInfo=(split/\n/,$WebInfo)[1];
+    my ($Links,$md5Line)=split/\t/,$WebInfo;
+    my @Links=split/;/,$Links;
+    my @md5Values=split/;/,$md5Line;
+    my %md5=();
+    for(my $i=0;$i<scalar(@Links);$i++){
+      $Links[$i]=(split/\//,$Links[$i])[-1];
+      $md5{$Links[$i]}=$md5Values[$i];
+    }
 
+    my $AutoSingle=$single;
+    # if(scalar(@md5)==1){$AutoSingle=1;}
+    # if(scalar(@md5)==2){$AutoSingle=0;} # 通过读取md5的信息，自动判断数据是单端还是双端
+    if($md5{"$id\_1.fastq.gz"} and $md5{"$id\_2.fastq.gz"} ){$AutoSingle=0;}
+    elsif($md5{"$id.fastq.gz"}){$AutoSingle=1;} # 不要通过md5是的位置来臆断对应文件！例子：PRJEB13208
       if(length($id) == 10){
           # 10位SRA会在Sub2子文件夹里有000-009的10个额外的子文件夹中
           my $tmp=substr($id,9,1);
@@ -214,22 +223,25 @@ sub download{
 
     if($AutoSingle){
       # 单端Reads，自动匹配是否是单端序列
-      system("echo \"$md5[0] $id.fastq.gz\" >> $outdir/md5sum");
+      my $md5Value=$md5{"$id.fastq.gz"};
+      system("echo \"$md5Value $id.fastq.gz\" >> $outdir/md5sum");
       my $CMD="$ascp -QT -l 300m -P33001 -i $KEY -k 1 $link.fastq.gz .";
       chdir($outdir);
-      &GetFile($CMD,"$id.fastq.gz",$md5[0]);
+      &GetFile($CMD,"$id.fastq.gz",$md5{"$id.fastq.gz"});
       chdir($work_dir);
     }else{
       # 双端Reads
-      system("echo \"$md5[0] $id\_1.fastq.gz\" >> $outdir/md5sum");
-      system("echo \"$md5[1] $id\_2.fastq.gz\" >> $outdir/md5sum");
+      my $md5Value=$md5{"$id\_1.fastq.gz"};
+      system("echo \"$md5Value $id\_1.fastq.gz\" >> $outdir/md5sum");
+      $md5Value=$md5{"$id\_2.fastq.gz"};
+      system("echo \"$md5Value $id\_2.fastq.gz\" >> $outdir/md5sum");
       my $CMD1="$ascp -QT -l 300m -P33001 -i $KEY -k 1 $link\_1.fastq.gz .";
       my $CMD2="$ascp -QT -l 300m -P33001 -i $KEY -k 1 $link\_2.fastq.gz .";
       #开双线程下载
       chdir($outdir);
       prun(
-    		sub1=>[\&GetFile,($CMD1,"$id\_1.fastq.gz",$md5[0])],
-    		sub2=>[\&GetFile,($CMD2,"$id\_2.fastq.gz",$md5[1])],
+    		sub1=>[\&GetFile,($CMD1,"$id\_1.fastq.gz",$md5{"$id\_1.fastq.gz"})],
+    		sub2=>[\&GetFile,($CMD2,"$id\_2.fastq.gz",$md5{"$id\_2.fastq.gz"})],
     	)or die(Parallel::Simple::errplus());
       chdir($work_dir);
     }
@@ -244,7 +256,7 @@ sub download{
     my $md5=shift; # 待校验的md5
 
     unless(-e $File){&run($CMD);} # 文件没有下载完，则跑
-    my $Checked=();
+    my $Checked=0;
     my $N=1;
     while($N<5){ # 下载最多尝试5次
       $Checked=`md5sum $File`;
