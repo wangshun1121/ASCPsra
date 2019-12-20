@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 # Wangshun @ Xiamen
 # Version 1.1
 # 2018.5.18
