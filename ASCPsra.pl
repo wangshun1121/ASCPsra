@@ -28,18 +28,18 @@ unless($Check){
   print "Aspera should be installed first, see https://gitee.com/wangshun1121/ASCPsra \n";
   exit();
 }
-$Check= `$fastq_dump -h`;
-unless($Check){
-  print "NCBI fastq-dump should be installed first, see https://gitee.com/wangshun1121/ASCPsra \n";
-  exit();
-}else{
-  $Check=`$sra_stat -h`;
-  unless($Check){
+#$Check= `$fastq_dump -h`;
+#unless($Check){
+#  print "NCBI fastq-dump should be installed first, see https://gitee.com/wangshun1121/ASCPsra \n";
+#  exit();
+#}else{
+#  $Check=`$sra_stat -h`;
+#  unless($Check){
     #提醒客户将sra-stat加入环境变量
-    print "fastq-dump has been installed, then let me know where sra-stat is ^_^ \n";
-    exit();
-  }
-}
+#    print "fastq-dump has been installed, then let me know where sra-stat is ^_^ \n";
+#    exit();
+#  }
+#}
 
 our $work_dir = getcwd;
 our $Core = `grep \"process\" /proc/cpuinfo | wc -l `;
@@ -196,13 +196,14 @@ sub download{
   if($source eq 'ENA'){
     # print STDERR "Warning: downloading single end sequences from ENA are not taken into consideration\n";
     # ENA可直接下载fq数据，本版本中暂时仅考虑双端序列的情况
-    $link='era-fasp@fasp.sra.ebi.ac.uk:/vol1/fastq';
+    # $link='era-fasp@fasp.sra.ebi.ac.uk:/vol1/fastq';
     my $WebInfo=`curl -s "https://www.ebi.ac.uk/ena/data/warehouse/filereport?accession=$id&result=read_run&fields=fastq_aspera,fastq_md5&download=txt"`;
     $WebInfo=(split/\n/,$WebInfo)[1];
     my ($Links,$md5Line)=split/\t/,$WebInfo;
     my @Links=split/;/,$Links;
     my @md5Values=split/;/,$md5Line;
     my %md5=();
+    $link=$Links[0];
     for(my $i=0;$i<scalar(@Links);$i++){
       $Links[$i]=(split/\//,$Links[$i])[-1];
       $md5{$Links[$i]}=$md5Values[$i];
@@ -213,19 +214,20 @@ sub download{
     # if(scalar(@md5)==2){$AutoSingle=0;} # 通过读取md5的信息，自动判断数据是单端还是双端
     if($md5{"$id\_1.fastq.gz"} and $md5{"$id\_2.fastq.gz"} ){$AutoSingle=0;}
     elsif($md5{"$id.fastq.gz"}){$AutoSingle=1;} # 不要通过md5是的位置来臆断对应文件！例子：PRJEB13208
-      if(length($id) == 10){
-          # 10位SRA会在Sub2子文件夹里有000-009的10个额外的子文件夹中
-          my $tmp=substr($id,9,1);
-          $link="$link/$sub2/00$tmp/$id/$id";
-      }else{
-          $link="$link/$sub2/$id/$id";
-      }
+      # if(length($id) == 10){
+      #     # 10位SRA会在Sub2子文件夹里有000-009的10个额外的子文件夹中
+      #     my $tmp=substr($id,9,1);
+      #     $link="$link/$sub2/00$tmp/$id/$id";
+      # }else{
+      #     $link="$link/$sub2/$id/$id";
+      # }
 
     if($AutoSingle){
       # 单端Reads，自动匹配是否是单端序列
       my $md5Value=$md5{"$id.fastq.gz"};
       system("echo \"$md5Value $id.fastq.gz\" >> $outdir/md5sum");
-      my $CMD="$ascp -QT -l 300m -P33001 -i $KEY -k 1 $link.fastq.gz .";
+      # my $CMD="$ascp -QT -l 300m -P33001 -i $KEY -k 1 $link.fastq.gz .";
+      my $CMD="$ascp -QT -l 300m -P33001 -i $KEY -k 1 era-fasp\@$link .";
       chdir($outdir);
       &GetFile($CMD,"$id.fastq.gz",$md5{"$id.fastq.gz"});
       chdir($work_dir);
@@ -235,8 +237,9 @@ sub download{
       system("echo \"$md5Value $id\_1.fastq.gz\" >> $outdir/md5sum");
       $md5Value=$md5{"$id\_2.fastq.gz"};
       system("echo \"$md5Value $id\_2.fastq.gz\" >> $outdir/md5sum");
-      my $CMD1="$ascp -QT -l 300m -P33001 -i $KEY -k 1 $link\_1.fastq.gz .";
-      my $CMD2="$ascp -QT -l 300m -P33001 -i $KEY -k 1 $link\_2.fastq.gz .";
+      $link=~s/\_1.fastq.gz//;
+      my $CMD1="$ascp -QT -l 300m -P33001 -i $KEY -k 1 era-fasp\@$link\_1.fastq.gz .";
+      my $CMD2="$ascp -QT -l 300m -P33001 -i $KEY -k 1 era-fasp\@$link\_2.fastq.gz .";
       #开双线程下载
       chdir($outdir);
       prun(
