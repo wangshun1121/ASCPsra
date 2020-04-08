@@ -28,18 +28,18 @@ unless($Check){
   print "Aspera should be installed first, see https://gitee.com/wangshun1121/ASCPsra \n";
   exit();
 }
-#$Check= `$fastq_dump -h`;
-#unless($Check){
-#  print "NCBI fastq-dump should be installed first, see https://gitee.com/wangshun1121/ASCPsra \n";
-#  exit();
-#}else{
-#  $Check=`$sra_stat -h`;
-#  unless($Check){
-    #提醒客户将sra-stat加入环境变量
-#    print "fastq-dump has been installed, then let me know where sra-stat is ^_^ \n";
-#    exit();
-#  }
-#}
+$Check= `$fastq_dump -h`;
+unless($Check){
+ print "NCBI fastq-dump should be installed first, see https://gitee.com/wangshun1121/ASCPsra \n";
+ exit();
+}else{
+ $Check=`$sra_stat -h`;
+ unless($Check){
+   # 提醒客户将sra-stat加入环境变量
+   print "fastq-dump has been installed, then let me know where sra-stat is ^_^ \n";
+   exit();
+ }
+}
 
 our $work_dir = getcwd;
 our $Core = `grep \"process\" /proc/cpuinfo | wc -l `;
