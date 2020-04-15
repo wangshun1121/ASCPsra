@@ -203,8 +203,16 @@ sub download{
     my @Links=split/;/,$Links;
     my @md5Values=split/;/,$md5Line;
     my %md5=();
-    $link=$Links[0];
+    # note：发现了ENA上居然有数据即保存为单端又保存为双端，例如：SRR6315113
+    #       应对这种数据的策略，就是直接把数据判定为双端来下载！
+    if(scalar(@Links)>1){
+      $link=$Links[-2];
+    }else{
+      $link=$Links[0];
+    }
+   
     for(my $i=0;$i<scalar(@Links);$i++){
+      if($i<scalar(@Links)-2){next;} # 补上这句话就是应付类似 SRR6315113 的情况
       $Links[$i]=(split/\//,$Links[$i])[-1];
       $md5{$Links[$i]}=$md5Values[$i];
     }
