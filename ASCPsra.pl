@@ -197,9 +197,11 @@ sub download{
     # print STDERR "Warning: downloading single end sequences from ENA are not taken into consideration\n";
     # ENA可直接下载fq数据，本版本中暂时仅考虑双端序列的情况
     # $link='era-fasp@fasp.sra.ebi.ac.uk:/vol1/fastq';
-    my $WebInfo=`curl -s "https://www.ebi.ac.uk/ena/data/warehouse/filereport?accession=$id&result=read_run&fields=fastq_aspera,fastq_md5&download=txt"`;
+    my $WebInfo=`curl -s "https://www.ebi.ac.uk/ena/portal/api/filereport?accession=$id&result=read_run&fields=fastq_aspera,fastq_md5"`;
     $WebInfo=(split/\n/,$WebInfo)[1];
-    my ($Links,$md5Line)=split/\t/,$WebInfo;
+    my ($Links,$md5Line)=(split/\t/,$WebInfo)[-2,-1];
+    # 修改ENA Reads获取的API，2020.8.17
+      
     my @Links=split/;/,$Links;
     my @md5Values=split/;/,$md5Line;
     my %md5=();
